@@ -2,6 +2,7 @@ package chi
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -42,6 +43,8 @@ type Mux struct {
 
 	// Custom method not allowed handler
 	methodNotAllowedHandler HandlerFunc
+
+	errorHandler ErrorHandlerFunc
 }
 
 // NewMux returns a newly initialized Mux object that implements the Router
@@ -60,7 +63,10 @@ func NewMux() *Mux {
 func (mx *Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) HandlerError {
 	// Ensure the mux has some routes defined on the mux
 	if mx.handler == nil {
-		panic("chi: attempting to route to a mux with no handlers.")
+		return Error{
+			code: 500,
+			err:  errors.New("chi: attempting to route to a mux with no handlers"),
+		}
 	}
 
 	// Check if a routing context already exists from a parent router.
@@ -363,11 +369,19 @@ func (mx *Mux) MethodNotAllowedHandler() HandlerFunc {
 	return methodNotAllowedHandler
 }
 
+func (mx *Mux) Error(h ErrorHandlerFunc) {
+	mx.errorHandler = h
+}
+
 func (mx *Mux) ToHTTPHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		err := mx.ServeHTTP(w, r)
 		if err != nil {
-			panic("chi: an unhandled error occurred")
+			if mx.errorHandler == nil {
+				defaultErrorHandler(err, w, r)
+			} else {
+				mx.errorHandler(err, w, r)
+			}
 		}
 	})
 }
@@ -470,4 +484,12 @@ func methodNotAllowedHandler(_ http.ResponseWriter, _ *http.Request) HandlerErro
 
 func notFoundHandler(_ http.ResponseWriter, _ *http.Request) HandlerError {
 	return Error{code: 404}
+}
+
+func defaultErrorHandler(err HandlerError, w http.ResponseWriter, _ *http.Request) {
+	s := err.Error()
+	if s == "" {
+		s = http.StatusText(err.Code())
+	}
+	http.Error(w, s, err.Code())
 }

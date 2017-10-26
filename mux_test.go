@@ -3,6 +3,7 @@ package chi
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -211,8 +212,8 @@ func TestMuxBasic(t *testing.T) {
 	}
 
 	// Custom http method DIE /ping/1/woop
-	if resp, body := testRequest(t, ts, "DIE", "/ping/1/woop", nil); body != "" || resp.StatusCode != 405 {
-		t.Fatalf(fmt.Sprintf("expecting 405 status and empty body, got %d '%s'", resp.StatusCode, body))
+	if resp, body := testRequest(t, ts, "DIE", "/ping/1/woop", nil); body != fmt.Sprintln(http.StatusText(405)) || resp.StatusCode != 405 {
+		t.Fatalf(fmt.Sprintf("expecting 405 status and status text, got %d '%s'", resp.StatusCode, body))
 	}
 }
 
@@ -263,9 +264,7 @@ func TestMuxPlain(t *testing.T) {
 		return nil
 	})
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) HandlerError {
-		w.WriteHeader(404)
-		w.Write([]byte("nothing here"))
-		return nil
+		return Error{code: 404}
 	})
 
 	ts := httptest.NewServer(r.ToHTTPHandler())
@@ -274,8 +273,8 @@ func TestMuxPlain(t *testing.T) {
 	if _, body := testRequest(t, ts, "GET", "/hi", nil); body != "bye" {
 		t.Fatalf(body)
 	}
-	if _, body := testRequest(t, ts, "GET", "/nothing-here", nil); body != "nothing here" {
-		t.Fatalf(body)
+	if resp, body := testRequest(t, ts, "GET", "/", nil); resp.StatusCode != 404 || body != fmt.Sprintln(http.StatusText(404)) {
+		t.Fatalf("expected response 404, got '%d': '%s'", resp.StatusCode, body)
 	}
 }
 
@@ -287,35 +286,17 @@ func TestMuxEmptyRoutes(t *testing.T) {
 
 	mux.Handle("/api*", apiRouter)
 
-	if _, body := testHandler(t, mux, "GET", "/", nil); body != "404 page not found\n" {
+	if _, body, err := testHandler(t, mux, "GET", "/", nil); err.Code() != 404 {
 		t.Fatalf(body)
 	}
 
-	func() {
-		defer func() {
-			if r := recover(); r != nil {
-				if r != `chi: attempting to route to a mux with no handlers.` {
-					t.Fatalf("expecting empty route panic")
-				}
-			}
-		}()
+	if _, body, err := testHandler(t, mux, "GET", "/api", nil); err.Code() != 500 {
+		t.Fatalf(body)
+	}
 
-		_, body := testHandler(t, mux, "GET", "/api", nil)
-		t.Fatalf("oops, we are expecting a panic instead of getting resp: %s", body)
-	}()
-
-	func() {
-		defer func() {
-			if r := recover(); r != nil {
-				if r != `chi: attempting to route to a mux with no handlers.` {
-					t.Fatalf("expecting empty route panic")
-				}
-			}
-		}()
-
-		_, body := testHandler(t, mux, "GET", "/api/abc", nil)
-		t.Fatalf("oops, we are expecting a panic instead of getting resp: %s", body)
-	}()
+	if _, body, err := testHandler(t, mux, "GET", "/api/abc", nil); err.Code() != 500 {
+		t.Fatalf(body)
+	}
 }
 
 // Test a mux that routes a trailing slash, see also middleware/strip_test.go
@@ -323,9 +304,7 @@ func TestMuxEmptyRoutes(t *testing.T) {
 func TestMuxTrailingSlash(t *testing.T) {
 	r := NewRouter()
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) HandlerError {
-		w.WriteHeader(404)
-		w.Write([]byte("nothing here"))
-		return nil
+		return Error{code: 404}
 	})
 
 	subRoutes := NewRouter()
@@ -348,7 +327,7 @@ func TestMuxTrailingSlash(t *testing.T) {
 	if _, body := testRequest(t, ts, "GET", "/accounts/admin/", nil); body != "admin" {
 		t.Fatalf(body)
 	}
-	if _, body := testRequest(t, ts, "GET", "/nothing-here", nil); body != "nothing here" {
+	if resp, body := testRequest(t, ts, "GET", "/nothing-here", nil); resp.StatusCode != 404 {
 		t.Fatalf(body)
 	}
 }
@@ -376,9 +355,10 @@ func TestMuxNestedNotFound(t *testing.T) {
 	}).NotFound(func(w http.ResponseWriter, r *http.Request) HandlerError {
 		chkMw := r.Context().Value(ctxKey{"mw"}).(string)
 		chkWith := r.Context().Value(ctxKey{"with"}).(string)
-		w.WriteHeader(404)
-		w.Write([]byte(fmt.Sprintf("root 404 %s %s", chkMw, chkWith)))
-		return nil
+		return Error{
+			code: 404,
+			err:  errors.New(fmt.Sprintf("root 404 %s %s", chkMw, chkWith)),
+		}
 	})
 
 	sr1 := NewRouter()
@@ -396,9 +376,10 @@ func TestMuxNestedNotFound(t *testing.T) {
 		})
 		sr1.NotFound(func(w http.ResponseWriter, r *http.Request) HandlerError {
 			chkMw2 := r.Context().Value(ctxKey{"mw2"}).(string)
-			w.WriteHeader(404)
-			w.Write([]byte(fmt.Sprintf("sub 404 %s", chkMw2)))
-			return nil
+			return Error{
+				code: 404,
+				err:  errors.New(fmt.Sprintf("sub 404 %s", chkMw2)),
+			}
 		})
 	})
 
@@ -417,22 +398,22 @@ func TestMuxNestedNotFound(t *testing.T) {
 	if _, body := testRequest(t, ts, "GET", "/hi", nil); body != "bye" {
 		t.Fatalf(body)
 	}
-	if _, body := testRequest(t, ts, "GET", "/nothing-here", nil); body != "root 404 mw with" {
-		t.Fatalf(body)
+	if resp, body := testRequest(t, ts, "GET", "/nothing-here", nil); resp.StatusCode != 404 || body != "root 404 mw with\n" {
+		t.Fatalf("expected status code 404 with body 'root 404 mw with\n', got %d with '%s'", resp.StatusCode, body)
 	}
 	if _, body := testRequest(t, ts, "GET", "/admin1/sub", nil); body != "sub" {
 		t.Fatalf(body)
 	}
-	if _, body := testRequest(t, ts, "GET", "/admin1/nope", nil); body != "sub 404 mw2" {
-		t.Fatalf(body)
+	if resp, body := testRequest(t, ts, "GET", "/admin1/nope", nil); resp.StatusCode != 404 || body != "sub 404 mw2\n" {
+		t.Fatalf("expected status code 404 with body 'sub 404 mw2\n', got %d with '%s'", resp.StatusCode, body)
 	}
 	if _, body := testRequest(t, ts, "GET", "/admin2/sub", nil); body != "sub2" {
 		t.Fatalf(body)
 	}
 
 	// Not found pages should bubble up to the root.
-	if _, body := testRequest(t, ts, "GET", "/admin2/nope", nil); body != "root 404 mw with" {
-		t.Fatalf(body)
+	if resp, body := testRequest(t, ts, "GET", "/admin2/nope", nil); resp.StatusCode != 404 || body != "root 404 mw with\n" {
+		t.Fatalf("expected status code 404 with body 'root 404 mw with\n', got %d with '%s'", resp.StatusCode, body)
 	}
 }
 
@@ -443,9 +424,7 @@ func TestMuxNestedMethodNotAllowed(t *testing.T) {
 		return nil
 	})
 	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) HandlerError {
-		w.WriteHeader(405)
-		w.Write([]byte("root 405"))
-		return nil
+		return Error{code: 405}
 	})
 
 	sr1 := NewRouter()
@@ -454,9 +433,7 @@ func TestMuxNestedMethodNotAllowed(t *testing.T) {
 		return nil
 	})
 	sr1.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) HandlerError {
-		w.WriteHeader(405)
-		w.Write([]byte("sub1 405"))
-		return nil
+		return Error{code: 405}
 	})
 
 	sr2 := NewRouter()
@@ -474,19 +451,19 @@ func TestMuxNestedMethodNotAllowed(t *testing.T) {
 	if _, body := testRequest(t, ts, "GET", "/root", nil); body != "root" {
 		t.Fatalf(body)
 	}
-	if _, body := testRequest(t, ts, "PUT", "/root", nil); body != "root 405" {
+	if resp, body := testRequest(t, ts, "PUT", "/root", nil); resp.StatusCode != 405 {
 		t.Fatalf(body)
 	}
 	if _, body := testRequest(t, ts, "GET", "/prefix1/sub1", nil); body != "sub1" {
 		t.Fatalf(body)
 	}
-	if _, body := testRequest(t, ts, "PUT", "/prefix1/sub1", nil); body != "sub1 405" {
+	if resp, body := testRequest(t, ts, "PUT", "/prefix1/sub1", nil); resp.StatusCode != 405 {
 		t.Fatalf(body)
 	}
 	if _, body := testRequest(t, ts, "GET", "/prefix2/sub2", nil); body != "sub2" {
 		t.Fatalf(body)
 	}
-	if _, body := testRequest(t, ts, "PUT", "/prefix2/sub2", nil); body != "root 405" {
+	if resp, body := testRequest(t, ts, "PUT", "/prefix2/sub2", nil); resp.StatusCode != 405 {
 		t.Fatalf(body)
 	}
 }
@@ -826,7 +803,7 @@ func TestMuxBig(t *testing.T) {
 		t.Fatalf("got '%s'", body)
 	}
 	_, body = testRequest(t, ts, "GET", "/folders", nil)
-	if body != "404 page not found\n" {
+	if body != fmt.Sprintln(http.StatusText(404)) {
 		t.Fatalf("got '%s'", body)
 	}
 	_, body = testRequest(t, ts, "GET", "/folders/", nil)
@@ -838,7 +815,7 @@ func TestMuxBig(t *testing.T) {
 		t.Fatalf("got '%s'", body)
 	}
 	_, body = testRequest(t, ts, "GET", "/folders/nothing", nil)
-	if body != "404 page not found\n" {
+	if body != fmt.Sprintln(http.StatusText(404)) {
 		t.Fatalf("got '%s'", body)
 	}
 }
@@ -1149,7 +1126,7 @@ func TestMuxSubroutes(t *testing.T) {
 		t.Fatalf("expected:%s got:%s", expected, body)
 	}
 	resp, body = testRequest(t, ts, "GET", "/hubs/123/users/", nil)
-	expected = "404 page not found\n"
+	expected = fmt.Sprintln(http.StatusText(404))
 	if resp.StatusCode != 404 || body != expected {
 		t.Fatalf("expected:%s got:%s", expected, body)
 	}
@@ -1253,9 +1230,10 @@ func TestServeHTTPExistingContext(t *testing.T) {
 	})
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) HandlerError {
 		s, _ := r.Context().Value(ctxKey{"testCtx"}).(string)
-		w.WriteHeader(404)
-		w.Write([]byte(s))
-		return nil
+		return Error{
+			code: 404,
+			err:  errors.New(s),
+		}
 	})
 
 	testcases := []struct {
@@ -1288,16 +1266,28 @@ func TestServeHTTPExistingContext(t *testing.T) {
 			t.Fatalf("%v", err)
 		}
 		req = req.WithContext(tc.Ctx)
-		r.ServeHTTP(resp, req)
-		b, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			t.Fatalf("%v", err)
+
+		var code int
+		var body string
+		herr := r.ServeHTTP(resp, req)
+		if herr != nil {
+			code = herr.Code()
+			body = herr.Error()
+		} else {
+			code = resp.Code
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				t.Fatalf("%v", err)
+			} else {
+				body = string(b)
+			}
 		}
-		if resp.Code != tc.ExpectedStatus {
+
+		if code != tc.ExpectedStatus {
 			t.Fatalf("%v != %v", tc.ExpectedStatus, resp.Code)
 		}
-		if string(b) != tc.ExpectedBody {
-			t.Fatalf("%s != %s", tc.ExpectedBody, b)
+		if body != tc.ExpectedBody {
+			t.Fatalf("%s != %s", tc.ExpectedBody, body)
 		}
 	}
 }
@@ -1437,9 +1427,7 @@ func TestMuxMissingParams(t *testing.T) {
 		return nil
 	})
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) HandlerError {
-		w.WriteHeader(404)
-		w.Write([]byte("nothing here"))
-		return nil
+		return Error{code: 404}
 	})
 
 	ts := httptest.NewServer(r.ToHTTPHandler())
@@ -1448,7 +1436,7 @@ func TestMuxMissingParams(t *testing.T) {
 	if _, body := testRequest(t, ts, "GET", "/user/123", nil); body != "userId = '123'" {
 		t.Fatalf(body)
 	}
-	if _, body := testRequest(t, ts, "GET", "/user/", nil); body != "nothing here" {
+	if resp, body := testRequest(t, ts, "GET", "/user/", nil); resp.StatusCode != 404 {
 		t.Fatalf(body)
 	}
 }
@@ -1619,11 +1607,11 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string, body io
 	return resp, string(respBody)
 }
 
-func testHandler(t *testing.T, h Handler, method, path string, body io.Reader) (*http.Response, string) {
+func testHandler(t *testing.T, h Handler, method, path string, body io.Reader) (*http.Response, string, HandlerError) {
 	r, _ := http.NewRequest(method, path, body)
 	w := httptest.NewRecorder()
-	h.ServeHTTP(w, r)
-	return w.Result(), string(w.Body.Bytes())
+	err := h.ServeHTTP(w, r)
+	return w.Result(), string(w.Body.Bytes()), err
 }
 
 type testFileSystem struct {

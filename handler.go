@@ -43,5 +43,9 @@ func (e Error) Code() int {
 }
 
 func (e Error) Error() string {
-	return e.err.Error()
+	if e.err != nil {
+		return e.err.Error()
+	} else {
+		return ""
+	}
 }
