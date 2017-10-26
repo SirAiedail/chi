@@ -113,6 +113,8 @@ type Router interface {
 	// not allowed.
 	MethodNotAllowed(h HandlerFunc)
 
+	Error(h ErrorHandlerFunc)
+
 	ToHTTPHandler() http.Handler
 }
 
@@ -134,3 +136,5 @@ type Routes interface {
 // Middlewares type is a slice of standard middleware handlers with methods
 // to compose middleware chains and Handler's.
 type Middlewares []func(Handler) Handler
+
+type ErrorHandlerFunc func(HandlerError, http.ResponseWriter, *http.Request)
