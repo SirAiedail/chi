@@ -44,6 +44,7 @@ type Mux struct {
 	// Custom method not allowed handler
 	methodNotAllowedHandler HandlerFunc
 
+	// Custom method to handle errors that occur in middleware and request handlers
 	errorHandler ErrorHandlerFunc
 }
 
@@ -369,10 +370,15 @@ func (mx *Mux) MethodNotAllowedHandler() HandlerFunc {
 	return methodNotAllowedHandler
 }
 
+// Error allows providing a function to handle errors that occurred
+// in middleware or request handlers.
 func (mx *Mux) Error(h ErrorHandlerFunc) {
 	mx.errorHandler = h
 }
 
+// ToHTTPHandler returns a handler that implements the http.Handler interface.
+// This is also where the ErrorHandlerFunc is applied, as no errors will be passed
+// from here
 func (mx *Mux) ToHTTPHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		err := mx.ServeHTTP(w, r)
@@ -482,10 +488,14 @@ func methodNotAllowedHandler(_ http.ResponseWriter, _ *http.Request) HandlerErro
 	return Error{code: 405}
 }
 
+// notFoundHandler is a helper function to respond with a 404,
+// not found.
 func notFoundHandler(_ http.ResponseWriter, _ *http.Request) HandlerError {
 	return Error{code: 404}
 }
 
+// defaultErrorHandler is a function to send an HandlerError
+// that occurred middleware or handler function via http.Error
 func defaultErrorHandler(err HandlerError, w http.ResponseWriter, _ *http.Request) {
 	s := err.Error()
 	if s == "" {
