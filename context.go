@@ -131,8 +131,8 @@ func (s *RouteParams) Add(key, value string) {
 
 // ServerBaseContext wraps an http.Handler to set the request context to the
 // `baseCtx`.
-func ServerBaseContext(baseCtx context.Context, h http.Handler) http.Handler {
-	fn := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func ServerBaseContext(baseCtx context.Context, h Handler) Handler {
+	fn := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError {
 		ctx := r.Context()
 		baseCtx := baseCtx
 
@@ -144,7 +144,7 @@ func ServerBaseContext(baseCtx context.Context, h http.Handler) http.Handler {
 			baseCtx = context.WithValue(baseCtx, http.LocalAddrContextKey, v)
 		}
 
-		h.ServeHTTP(w, r.WithContext(baseCtx))
+		return h.ServeHTTP(w, r.WithContext(baseCtx))
 	})
 	return fn
 }
