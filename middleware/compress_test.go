@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-chi/chi"
+	"github.com/SirAiedail/chi"
 )
 
 func TestCompressor(t *testing.T) {
@@ -32,22 +32,25 @@ func TestCompressor(t *testing.T) {
 
 	r.Use(compressor.Handler)
 
-	r.Get("/gethtml", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/gethtml", func(w http.ResponseWriter, r *http.Request) chi.HandlerError {
 		w.Header().Set("Content-Type", "text/html")
 		w.Write([]byte("textstring"))
+		return nil
 	})
 
-	r.Get("/getcss", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/getcss", func(w http.ResponseWriter, r *http.Request) chi.HandlerError {
 		w.Header().Set("Content-Type", "text/html")
 		w.Write([]byte("textstring"))
+		return nil
 	})
 
-	r.Get("/getplain", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/getplain", func(w http.ResponseWriter, r *http.Request) chi.HandlerError {
 		w.Header().Set("Content-Type", "text/html")
 		w.Write([]byte("textstring"))
+		return nil
 	})
 
-	ts := httptest.NewServer(r)
+	ts := httptest.NewServer(r.ToHTTPHandler())
 	defer ts.Close()
 
 	tests := []struct {

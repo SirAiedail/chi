@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/go-chi/chi"
+	"github.com/SirAiedail/chi"
 )
 
 func TestContentCharset(t *testing.T) {
@@ -76,15 +76,19 @@ func TestContentCharset(t *testing.T) {
 
 			var r = chi.NewRouter()
 			r.Use(ContentCharset(tt.inputContentCharset...))
-			r.Get("/", func(w http.ResponseWriter, r *http.Request) {})
+			r.Get("/", func(w http.ResponseWriter, r *http.Request) chi.HandlerError { return nil })
 
 			var req, _ = http.NewRequest("GET", "/", nil)
 			req.Header.Set("Content-Type", tt.inputValue)
 
-			r.ServeHTTP(recorder, req)
-			var res = recorder.Result()
+			err := r.ServeHTTP(recorder, req)
+			res := recorder.Result()
 
-			if res.StatusCode != tt.want {
+			if tt.want >= 400 && err != nil && err.StatusCode() != tt.want {
+				t.Errorf("error is incorrect, got %d, weant %d", err.StatusCode(), tt.want)
+			} else if tt.want < 400 && err != nil {
+				t.Errorf("response is incorrect, got error, want response")
+			} else if err == nil && res.StatusCode != tt.want {
 				t.Errorf("response is incorrect, got %d, want %d", recorder.Code, tt.want)
 			}
 		})

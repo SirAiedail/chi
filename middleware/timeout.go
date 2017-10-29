@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 	"time"
+
+	"github.com/SirAiedail/chi"
 )
 
 // Timeout is a middleware that cancels ctx after a given timeout and return
@@ -30,20 +32,24 @@ import (
 // 	 w.Write([]byte("done"))
 //  })
 //
-func Timeout(timeout time.Duration) func(next http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		fn := func(w http.ResponseWriter, r *http.Request) {
+func Timeout(timeout time.Duration) func(next chi.Handler) chi.Handler {
+	return func(next chi.Handler) chi.Handler {
+		fn := func(w http.ResponseWriter, r *http.Request) chi.HandlerError {
 			ctx, cancel := context.WithTimeout(r.Context(), timeout)
-			defer func() {
-				cancel()
-				if ctx.Err() == context.DeadlineExceeded {
-					w.WriteHeader(http.StatusGatewayTimeout)
-				}
-			}()
 
 			r = r.WithContext(ctx)
-			next.ServeHTTP(w, r)
+			err := next.ServeHTTP(w, r)
+			if err != nil {
+				return err
+			}
+
+			cancel()
+			if ctx.Err() == context.DeadlineExceeded {
+				return chi.Error{Code: http.StatusGatewayTimeout}
+			} else {
+				return nil
+			}
 		}
-		return http.HandlerFunc(fn)
+		return chi.HandlerFunc(fn)
 	}
 }

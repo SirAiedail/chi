@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/go-chi/chi"
+	"github.com/SirAiedail/chi"
 )
 
 func TestContentEncodingMiddleware(t *testing.T) {
@@ -70,11 +70,15 @@ func TestContentEncodingMiddleware(t *testing.T) {
 			w := httptest.NewRecorder()
 			router := chi.NewRouter()
 			router.Use(middleware)
-			router.Post("/", func(w http.ResponseWriter, r *http.Request) {})
+			router.Post("/", func(w http.ResponseWriter, r *http.Request) chi.HandlerError { return nil })
 
-			router.ServeHTTP(w, r)
+			err := router.ServeHTTP(w, r)
 			res := w.Result()
-			if res.StatusCode != tt.expectedStatus {
+			if tt.expectedStatus >= 400 && err != nil && err.StatusCode() != tt.expectedStatus {
+				t.Errorf("error is incorrect, got %d, weant %d", err.StatusCode(), tt.expectedStatus)
+			} else if tt.expectedStatus < 400 && err != nil {
+				t.Errorf("response is incorrect, got error, want response")
+			} else if err == nil && res.StatusCode != tt.expectedStatus {
 				t.Errorf("response is incorrect, got %d, want %d", w.Code, tt.expectedStatus)
 			}
 		})

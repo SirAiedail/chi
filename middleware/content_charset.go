@@ -1,25 +1,30 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/SirAiedail/chi"
 )
 
 // ContentCharset generates a handler that writes a 415 Unsupported Media Type response if none of the charsets match.
 // An empty charset will allow requests with no Content-Type header or no specified charset.
-func ContentCharset(charsets ...string) func(next http.Handler) http.Handler {
+func ContentCharset(charsets ...string) func(next chi.Handler) chi.Handler {
 	for i, c := range charsets {
 		charsets[i] = strings.ToLower(c)
 	}
 
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return func(next chi.Handler) chi.Handler {
+		return chi.HandlerFunc(func(w http.ResponseWriter, r *http.Request) chi.HandlerError {
 			if !contentEncoding(r.Header.Get("Content-Type"), charsets...) {
-				w.WriteHeader(http.StatusUnsupportedMediaType)
-				return
+				return chi.Error{
+					Code: http.StatusUnsupportedMediaType,
+					Err:  fmt.Errorf(http.StatusText(http.StatusUnsupportedMediaType)),
+				}
 			}
 
-			next.ServeHTTP(w, r)
+			return next.ServeHTTP(w, r)
 		})
 	}
 }

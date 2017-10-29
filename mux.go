@@ -487,13 +487,13 @@ func (mx *Mux) updateSubRoutes(fn func(subMux *Mux)) {
 // methodNotAllowedHandler is a helper function to respond with a 405,
 // method not allowed.
 func methodNotAllowedHandler(_ http.ResponseWriter, _ *http.Request) HandlerError {
-	return Error{Code: 405}
+	return Error{Code: http.StatusMethodNotAllowed}
 }
 
 // notFoundHandler is a helper function to respond with a 404,
 // not found.
 func notFoundHandler(_ http.ResponseWriter, _ *http.Request) HandlerError {
-	return Error{Code: 404}
+	return Error{Code: http.StatusNotFound}
 }
 
 // defaultErrorHandler is a function to send an HandlerError

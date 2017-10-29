@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/go-chi/chi"
+	"github.com/SirAiedail/chi"
 )
 
 func maintainDefaultRequestId() func() {
@@ -56,15 +56,16 @@ func TestRequestID(t *testing.T) {
 
 		r.Use(RequestID)
 
-		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		r.Get("/", func(w http.ResponseWriter, r *http.Request) chi.HandlerError {
 			requestID := GetReqID(r.Context())
 			response := fmt.Sprintf("RequestID: %s", requestID)
 
 			w.Write([]byte(response))
+			return nil
 		})
-		r.ServeHTTP(w, test.request())
+		err := r.ServeHTTP(w, test.request())
 
-		if w.Body.String() != test.expectedResponse {
+		if err != nil || w.Body.String() != test.expectedResponse {
 			t.Fatalf("RequestID was not the expected value")
 		}
 	}

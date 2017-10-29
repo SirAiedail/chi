@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/SirAiedail/chi"
 )
 
 var (
@@ -27,14 +29,14 @@ var (
 //
 // Alternatively, look at https://github.com/goware/httplog for a more in-depth
 // http logger with structured logging support.
-func Logger(next http.Handler) http.Handler {
+func Logger(next chi.Handler) chi.Handler {
 	return DefaultLogger(next)
 }
 
 // RequestLogger returns a logger handler using a custom LogFormatter.
-func RequestLogger(f LogFormatter) func(next http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		fn := func(w http.ResponseWriter, r *http.Request) {
+func RequestLogger(f LogFormatter) func(next chi.Handler) chi.Handler {
+	return func(next chi.Handler) chi.Handler {
+		fn := func(w http.ResponseWriter, r *http.Request) chi.HandlerError {
 			entry := f.NewLogEntry(r)
 			ww := NewWrapResponseWriter(w, r.ProtoMajor)
 
@@ -43,9 +45,9 @@ func RequestLogger(f LogFormatter) func(next http.Handler) http.Handler {
 				entry.Write(ww.Status(), ww.BytesWritten(), ww.Header(), time.Since(t1), nil)
 			}()
 
-			next.ServeHTTP(ww, WithLogEntry(r, entry))
+			return next.ServeHTTP(ww, WithLogEntry(r, entry))
 		}
-		return http.HandlerFunc(fn)
+		return chi.HandlerFunc(fn)
 	}
 }
 

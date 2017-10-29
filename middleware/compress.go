@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+
+	"github.com/SirAiedail/chi"
 )
 
 var defaultCompressibleContentTypes = []string{
@@ -38,7 +40,7 @@ var defaultCompressibleContentTypes = []string{
 // or set it manually.
 //
 // Passing a compression level of 5 is sensible value
-func Compress(level int, types ...string) func(next http.Handler) http.Handler {
+func Compress(level int, types ...string) func(next chi.Handler) chi.Handler {
 	compressor := NewCompressor(level, types...)
 	return compressor.Handler
 }
@@ -191,8 +193,8 @@ func (c *Compressor) SetEncoder(encoding string, fn EncoderFunc) {
 
 // Handler returns a new middleware that will compress the response based on the
 // current Compressor.
-func (c *Compressor) Handler(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func (c *Compressor) Handler(next chi.Handler) chi.Handler {
+	return chi.HandlerFunc(func(w http.ResponseWriter, r *http.Request) chi.HandlerError {
 		encoder, encoding, cleanup := c.selectEncoder(r.Header, w)
 
 		cw := &compressResponseWriter{
@@ -210,7 +212,7 @@ func (c *Compressor) Handler(next http.Handler) http.Handler {
 		defer cleanup()
 		defer cw.Close()
 
-		next.ServeHTTP(cw, r)
+		return next.ServeHTTP(cw, r)
 	})
 }
 

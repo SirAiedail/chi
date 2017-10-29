@@ -1,15 +1,18 @@
 package middleware
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/SirAiedail/chi"
 )
 
-const (
-	errCapacityExceeded = "Server capacity exceeded."
-	errTimedOut         = "Timed out while waiting for a pending request to complete."
-	errContextCanceled  = "Context was canceled."
+var (
+	errCapacityExceeded = errors.New("server capacity exceeded")
+	errTimedOut         = errors.New("timed out while waiting for a pending request to complete")
+	errContextCanceled  = errors.New("context was canceled")
 )
 
 var (
@@ -28,19 +31,19 @@ type ThrottleOpts struct {
 // at a time across all users. Note: Throttle is not a rate-limiter per user,
 // instead it just puts a ceiling on the number of currentl in-flight requests
 // being processed from the point from where the Throttle middleware is mounted.
-func Throttle(limit int) func(http.Handler) http.Handler {
+func Throttle(limit int) func(chi.Handler) chi.Handler {
 	return ThrottleWithOpts(ThrottleOpts{Limit: limit, BacklogTimeout: defaultBacklogTimeout})
 }
 
 // ThrottleBacklog is a middleware that limits number of currently processed
 // requests at a time and provides a backlog for holding a finite number of
 // pending requests.
-func ThrottleBacklog(limit int, backlogLimit int, backlogTimeout time.Duration) func(http.Handler) http.Handler {
+func ThrottleBacklog(limit int, backlogLimit int, backlogTimeout time.Duration) func(chi.Handler) chi.Handler {
 	return ThrottleWithOpts(ThrottleOpts{Limit: limit, BacklogLimit: backlogLimit, BacklogTimeout: backlogTimeout})
 }
 
 // ThrottleWithOpts is a middleware that limits number of currently processed requests using passed ThrottleOpts.
-func ThrottleWithOpts(opts ThrottleOpts) func(http.Handler) http.Handler {
+func ThrottleWithOpts(opts ThrottleOpts) func(chi.Handler) chi.Handler {
 	if opts.Limit < 1 {
 		panic("chi/middleware: Throttle expects limit > 0")
 	}
@@ -64,16 +67,18 @@ func ThrottleWithOpts(opts ThrottleOpts) func(http.Handler) http.Handler {
 		t.backlogTokens <- token{}
 	}
 
-	return func(next http.Handler) http.Handler {
-		fn := func(w http.ResponseWriter, r *http.Request) {
+	return func(next chi.Handler) chi.Handler {
+		fn := func(w http.ResponseWriter, r *http.Request) chi.HandlerError {
 			ctx := r.Context()
 
 			select {
 
 			case <-ctx.Done():
 				t.setRetryAfterHeaderIfNeeded(w, true)
-				http.Error(w, errContextCanceled, http.StatusTooManyRequests)
-				return
+				return chi.Error{
+					Code: http.StatusTooManyRequests,
+					Err:  errContextCanceled,
+				}
 
 			case btok := <-t.backlogTokens:
 				timer := time.NewTimer(t.backlogTimeout)
@@ -85,30 +90,36 @@ func ThrottleWithOpts(opts ThrottleOpts) func(http.Handler) http.Handler {
 				select {
 				case <-timer.C:
 					t.setRetryAfterHeaderIfNeeded(w, false)
-					http.Error(w, errTimedOut, http.StatusTooManyRequests)
-					return
+					return chi.Error{
+						Code: http.StatusTooManyRequests,
+						Err:  errTimedOut,
+					}
 				case <-ctx.Done():
 					timer.Stop()
 					t.setRetryAfterHeaderIfNeeded(w, true)
-					http.Error(w, errContextCanceled, http.StatusTooManyRequests)
-					return
+					return chi.Error{
+						Code: http.StatusTooManyRequests,
+						Err:  errContextCanceled,
+					}
 				case tok := <-t.tokens:
 					defer func() {
 						timer.Stop()
 						t.tokens <- tok
 					}()
-					next.ServeHTTP(w, r)
+					return next.ServeHTTP(w, r)
 				}
-				return
+				return nil
 
 			default:
 				t.setRetryAfterHeaderIfNeeded(w, false)
-				http.Error(w, errCapacityExceeded, http.StatusTooManyRequests)
-				return
+				return chi.Error{
+					Code: http.StatusTooManyRequests,
+					Err:  errCapacityExceeded,
+				}
 			}
 		}
 
-		return http.HandlerFunc(fn)
+		return chi.HandlerFunc(fn)
 	}
 }
 
