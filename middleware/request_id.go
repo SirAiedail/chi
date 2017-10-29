@@ -12,6 +12,8 @@ import (
 	"os"
 	"strings"
 	"sync/atomic"
+
+	"github.com/SirAiedail/chi"
 )
 
 // Key to use when setting the request ID.
@@ -60,14 +62,14 @@ func init() {
 // where "random" is a base62 random string that uniquely identifies this go
 // process, and where the last number is an atomically incremented request
 // counter.
-func RequestID(next http.Handler) http.Handler {
-	fn := func(w http.ResponseWriter, r *http.Request) {
-		myid := atomic.AddUint64(&reqid, 1)
+func RequestID(next chi.Handler) chi.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) chi.HandlerError {
+		myid := NextRequestID()
 		ctx := r.Context()
 		ctx = context.WithValue(ctx, RequestIDKey, fmt.Sprintf("%s-%06d", prefix, myid))
-		next.ServeHTTP(w, r.WithContext(ctx))
+		return next.ServeHTTP(w, r.WithContext(ctx))
 	}
-	return http.HandlerFunc(fn)
+	return chi.HandlerFunc(fn)
 }
 
 // GetReqID returns a request ID from the given context if one is present.

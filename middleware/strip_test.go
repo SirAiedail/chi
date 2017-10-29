@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/go-chi/chi"
+	"github.com/SirAiedail/chi"
 )
 
 func TestStripSlashes(t *testing.T) {
@@ -15,76 +15,78 @@ func TestStripSlashes(t *testing.T) {
 	// because then it'll be too late and will end up in a 404
 	r.Use(StripSlashes)
 
-	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(404)
-		w.Write([]byte("nothing here"))
+	r.NotFound(func(w http.ResponseWriter, r *http.Request) chi.HandlerError {
+		return chi.Error{Code: http.StatusNotFound}
 	})
 
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) chi.HandlerError {
 		w.Write([]byte("root"))
+		return nil
 	})
 
 	r.Route("/accounts/{accountID}", func(r chi.Router) {
-		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		r.Get("/", func(w http.ResponseWriter, r *http.Request) chi.HandlerError {
 			accountID := chi.URLParam(r, "accountID")
 			w.Write([]byte(accountID))
+			return nil
 		})
 	})
 
-	ts := httptest.NewServer(r)
+	ts := httptest.NewServer(r.ToHTTPHandler())
 	defer ts.Close()
 
-	if _, resp := testRequest(t, ts, "GET", "/", nil); resp != "root" {
-		t.Fatalf(resp)
+	if _, body := testRequest(t, ts, "GET", "/", nil); body != "root" {
+		t.Fatalf(body)
 	}
-	if _, resp := testRequest(t, ts, "GET", "//", nil); resp != "root" {
-		t.Fatalf(resp)
+	if _, body := testRequest(t, ts, "GET", "//", nil); body != "root" {
+		t.Fatalf(body)
 	}
-	if _, resp := testRequest(t, ts, "GET", "/accounts/admin", nil); resp != "admin" {
-		t.Fatalf(resp)
+	if _, body := testRequest(t, ts, "GET", "/accounts/admin", nil); body != "admin" {
+		t.Fatalf(body)
 	}
-	if _, resp := testRequest(t, ts, "GET", "/accounts/admin/", nil); resp != "admin" {
-		t.Fatalf(resp)
+	if _, body := testRequest(t, ts, "GET", "/accounts/admin/", nil); body != "admin" {
+		t.Fatalf(body)
 	}
-	if _, resp := testRequest(t, ts, "GET", "/nothing-here", nil); resp != "nothing here" {
-		t.Fatalf(resp)
+	if resp, body := testRequest(t, ts, "GET", "/nothing-here", nil); resp.StatusCode != http.StatusNotFound {
+		t.Fatalf(body)
 	}
 }
 
 func TestStripSlashesInRoute(t *testing.T) {
 	r := chi.NewRouter()
 
-	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(404)
-		w.Write([]byte("nothing here"))
+	r.NotFound(func(w http.ResponseWriter, r *http.Request) chi.HandlerError {
+		return chi.Error{Code: http.StatusNotFound}
 	})
 
-	r.Get("/hi", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/hi", func(w http.ResponseWriter, r *http.Request) chi.HandlerError {
 		w.Write([]byte("hi"))
+		return nil
 	})
 
 	r.Route("/accounts/{accountID}", func(r chi.Router) {
 		r.Use(StripSlashes)
-		r.Get("/query", func(w http.ResponseWriter, r *http.Request) {
+		r.Get("/query", func(w http.ResponseWriter, r *http.Request) chi.HandlerError {
 			accountID := chi.URLParam(r, "accountID")
 			w.Write([]byte(accountID))
+			return nil
 		})
 	})
 
-	ts := httptest.NewServer(r)
+	ts := httptest.NewServer(r.ToHTTPHandler())
 	defer ts.Close()
 
-	if _, resp := testRequest(t, ts, "GET", "/hi", nil); resp != "hi" {
-		t.Fatalf(resp)
+	if _, body := testRequest(t, ts, "GET", "/hi", nil); body != "hi" {
+		t.Fatalf(body)
 	}
-	if _, resp := testRequest(t, ts, "GET", "/hi/", nil); resp != "nothing here" {
-		t.Fatalf(resp)
+	if resp, body := testRequest(t, ts, "GET", "/hi/", nil); resp.StatusCode != http.StatusNotFound {
+		t.Fatalf(body)
 	}
-	if _, resp := testRequest(t, ts, "GET", "/accounts/admin/query", nil); resp != "admin" {
-		t.Fatalf(resp)
+	if _, body := testRequest(t, ts, "GET", "/accounts/admin/query", nil); body != "admin" {
+		t.Fatalf(body)
 	}
-	if _, resp := testRequest(t, ts, "GET", "/accounts/admin/query/", nil); resp != "admin" {
-		t.Fatalf(resp)
+	if _, body := testRequest(t, ts, "GET", "/accounts/admin/query/", nil); body != "admin" {
+		t.Fatalf(body)
 	}
 }
 
@@ -95,44 +97,45 @@ func TestRedirectSlashes(t *testing.T) {
 	// because then it'll be too late and will end up in a 404
 	r.Use(RedirectSlashes)
 
-	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(404)
-		w.Write([]byte("nothing here"))
+	r.NotFound(func(w http.ResponseWriter, r *http.Request) chi.HandlerError {
+		return chi.Error{Code: http.StatusNotFound}
 	})
 
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) chi.HandlerError {
 		w.Write([]byte("root"))
+		return nil
 	})
 
 	r.Route("/accounts/{accountID}", func(r chi.Router) {
-		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		r.Get("/", func(w http.ResponseWriter, r *http.Request) chi.HandlerError {
 			accountID := chi.URLParam(r, "accountID")
 			w.Write([]byte(accountID))
+			return nil
 		})
 	})
 
-	ts := httptest.NewServer(r)
+	ts := httptest.NewServer(r.ToHTTPHandler())
 	defer ts.Close()
 
-	if req, resp := testRequest(t, ts, "GET", "/", nil); resp != "root" && req.StatusCode != 200 {
-		t.Fatalf(resp)
+	if resp, body := testRequest(t, ts, "GET", "/", nil); body != "root" && resp.StatusCode != 200 {
+		t.Fatalf(body)
 	}
 
 	// NOTE: the testRequest client will follow the redirection..
-	if req, resp := testRequest(t, ts, "GET", "//", nil); resp != "root" && req.StatusCode != 200 {
-		t.Fatalf(resp)
+	if resp, body := testRequest(t, ts, "GET", "//", nil); body != "root" && resp.StatusCode != 200 {
+		t.Fatalf(body)
 	}
 
-	if req, resp := testRequest(t, ts, "GET", "/accounts/admin", nil); resp != "admin" && req.StatusCode != 200 {
-		t.Fatalf(resp)
+	if resp, body := testRequest(t, ts, "GET", "/accounts/admin", nil); body != "admin" && resp.StatusCode != 200 {
+		t.Fatalf(body)
 	}
 
 	// NOTE: the testRequest client will follow the redirection..
-	if req, resp := testRequest(t, ts, "GET", "/accounts/admin/", nil); resp != "admin" && req.StatusCode != 200 {
-		t.Fatalf(resp)
+	if resp, body := testRequest(t, ts, "GET", "/accounts/admin/", nil); body != "admin" && resp.StatusCode != 200 {
+		t.Fatalf(body)
 	}
 
-	if req, resp := testRequest(t, ts, "GET", "/nothing-here", nil); resp != "nothing here" && req.StatusCode != 200 {
-		t.Fatalf(resp)
+	if resp, body := testRequest(t, ts, "GET", "/nothing-here", nil); resp.StatusCode != http.StatusNotFound {
+		t.Fatalf(body)
 	}
 }

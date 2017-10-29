@@ -28,6 +28,13 @@ func FromHTTPHandler(h http.Handler) Handler {
 	})
 }
 
+func FromHTTPHandlerFunc(h http.HandlerFunc) HandlerFunc {
+	return HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError {
+		h(w, r)
+		return nil
+	})
+}
+
 type HandlerError interface {
 	error
 	StatusCode() int

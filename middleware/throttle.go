@@ -1,14 +1,17 @@
 package middleware
 
 import (
+	"errors"
 	"net/http"
 	"time"
+
+	"github.com/SirAiedail/chi"
 )
 
-const (
-	errCapacityExceeded = "Server capacity exceeded."
-	errTimedOut         = "Timed out while waiting for a pending request to complete."
-	errContextCanceled  = "Context was canceled."
+var (
+	errCapacityExceeded = errors.New("server capacity exceeded")
+	errTimedOut         = errors.New("timed out while waiting for a pending request to complete")
+	errContextCanceled  = errors.New("context was canceled")
 )
 
 var (
@@ -17,14 +20,14 @@ var (
 
 // Throttle is a middleware that limits number of currently processed requests
 // at a time.
-func Throttle(limit int) func(http.Handler) http.Handler {
+func Throttle(limit int) func(chi.Handler) chi.Handler {
 	return ThrottleBacklog(limit, 0, defaultBacklogTimeout)
 }
 
 // ThrottleBacklog is a middleware that limits number of currently processed
 // requests at a time and provides a backlog for holding a finite number of
 // pending requests.
-func ThrottleBacklog(limit int, backlogLimit int, backlogTimeout time.Duration) func(http.Handler) http.Handler {
+func ThrottleBacklog(limit int, backlogLimit int, backlogTimeout time.Duration) func(chi.Handler) chi.Handler {
 	if limit < 1 {
 		panic("chi/middleware: Throttle expects limit > 0")
 	}
@@ -47,7 +50,7 @@ func ThrottleBacklog(limit int, backlogLimit int, backlogTimeout time.Duration) 
 		t.backlogTokens <- token{}
 	}
 
-	fn := func(h http.Handler) http.Handler {
+	fn := func(h chi.Handler) chi.Handler {
 		t.h = h
 		return &t
 	}
@@ -60,19 +63,21 @@ type token struct{}
 
 // throttler limits number of currently processed requests at a time.
 type throttler struct {
-	h              http.Handler
+	h              chi.Handler
 	tokens         chan token
 	backlogTokens  chan token
 	backlogTimeout time.Duration
 }
 
 // ServeHTTP is the primary throttler request handler
-func (t *throttler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (t *throttler) ServeHTTP(w http.ResponseWriter, r *http.Request) chi.HandlerError {
 	ctx := r.Context()
 	select {
 	case <-ctx.Done():
-		http.Error(w, errContextCanceled, http.StatusServiceUnavailable)
-		return
+		return chi.Error{
+			Code: http.StatusServiceUnavailable,
+			Err:  errContextCanceled,
+		}
 	case btok := <-t.backlogTokens:
 		timer := time.NewTimer(t.backlogTimeout)
 
@@ -82,20 +87,26 @@ func (t *throttler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		select {
 		case <-timer.C:
-			http.Error(w, errTimedOut, http.StatusServiceUnavailable)
-			return
+			return chi.Error{
+				Code: http.StatusServiceUnavailable,
+				Err:  errTimedOut,
+			}
 		case <-ctx.Done():
-			http.Error(w, errContextCanceled, http.StatusServiceUnavailable)
-			return
+			return chi.Error{
+				Code: http.StatusServiceUnavailable,
+				Err:  errContextCanceled,
+			}
 		case tok := <-t.tokens:
 			defer func() {
 				t.tokens <- tok
 			}()
-			t.h.ServeHTTP(w, r)
+			return t.h.ServeHTTP(w, r)
 		}
-		return
+		return nil
 	default:
-		http.Error(w, errCapacityExceeded, http.StatusServiceUnavailable)
-		return
+		return chi.Error{
+			Code: http.StatusServiceUnavailable,
+			Err:  errCapacityExceeded,
+		}
 	}
 }

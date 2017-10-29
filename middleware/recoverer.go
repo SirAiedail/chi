@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"os"
 	"runtime/debug"
+
+	"github.com/SirAiedail/chi"
 )
 
 // Recoverer is a middleware that recovers from panics, logs the panic (and a
@@ -15,25 +17,24 @@ import (
 // possible. Recoverer prints a request ID if one is provided.
 //
 // Alternatively, look at https://github.com/pressly/lg middleware pkgs.
-func Recoverer(next http.Handler) http.Handler {
-	fn := func(w http.ResponseWriter, r *http.Request) {
-		defer func() {
-			if rvr := recover(); rvr != nil {
-
-				logEntry := GetLogEntry(r)
-				if logEntry != nil {
-					logEntry.Panic(rvr, debug.Stack())
-				} else {
-					fmt.Fprintf(os.Stderr, "Panic: %+v\n", rvr)
-					debug.PrintStack()
-				}
-
-				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+func Recoverer(next chi.Handler) chi.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) chi.HandlerError {
+		err := next.ServeHTTP(w, r)
+		if err != nil {
+			return err
+		} else if rvr := recover(); rvr != nil {
+			logEntry := GetLogEntry(r)
+			if logEntry != nil {
+				logEntry.Panic(rvr, debug.Stack())
+			} else {
+				fmt.Fprintf(os.Stderr, "Panic: %+v\n", rvr)
+				debug.PrintStack()
 			}
-		}()
-
-		next.ServeHTTP(w, r)
+			return chi.Error{Code: http.StatusInternalServerError}
+		} else {
+			return nil
+		}
 	}
 
-	return http.HandlerFunc(fn)
+	return chi.HandlerFunc(fn)
 }

@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/go-chi/chi"
+	"github.com/SirAiedail/chi"
 )
 
 func TestXRealIP(t *testing.T) {
@@ -17,14 +17,18 @@ func TestXRealIP(t *testing.T) {
 	r.Use(RealIP)
 
 	realIP := ""
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) chi.HandlerError {
 		realIP = r.RemoteAddr
 		w.Write([]byte("Hello World"))
+		return nil
 	})
-	r.ServeHTTP(w, req)
+	err := r.ServeHTTP(w, req)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if w.Code != 200 {
-		t.Fatal("Response Code should be 200")
+		t.Fatal("Response StatusCode should be 200")
 	}
 
 	if realIP != "100.100.100.100" {
@@ -41,14 +45,18 @@ func TestXForwardForIP(t *testing.T) {
 	r.Use(RealIP)
 
 	realIP := ""
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) chi.HandlerError {
 		realIP = r.RemoteAddr
 		w.Write([]byte("Hello World"))
+		return nil
 	})
-	r.ServeHTTP(w, req)
+	err := r.ServeHTTP(w, req)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if w.Code != 200 {
-		t.Fatal("Response Code should be 200")
+		t.Fatal("Response StatusCode should be 200")
 	}
 
 	if realIP != "100.100.100.100" {

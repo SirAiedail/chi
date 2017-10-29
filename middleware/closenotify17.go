@@ -5,6 +5,10 @@ package middleware
 import (
 	"context"
 	"net/http"
+
+	"errors"
+
+	"github.com/SirAiedail/chi"
 )
 
 // CloseNotify is a middleware that cancels ctx when the underlying
@@ -13,11 +17,15 @@ import (
 //
 // Note: this behaviour is standard in Go 1.8+, so the middleware does nothing
 // on 1.8+ and exists just for backwards compatibility.
-func CloseNotify(next http.Handler) http.Handler {
-	fn := func(w http.ResponseWriter, r *http.Request) {
+func CloseNotify(next chi.Handler) chi.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) chi.HandlerError {
 		cn, ok := w.(http.CloseNotifier)
 		if !ok {
-			panic("chi/middleware: CloseNotify expects http.ResponseWriter to implement http.CloseNotifier interface")
+			return Error{
+				code: 500,
+				err: errors.New("chi/middleware: CloseNotify expects http.ResponseWriter to implement http" +
+					".CloseNotifier interface"),
+			}
 		}
 		closeNotifyCh := cn.CloseNotify()
 
@@ -35,8 +43,8 @@ func CloseNotify(next http.Handler) http.Handler {
 		}()
 
 		r = r.WithContext(ctx)
-		next.ServeHTTP(w, r)
+		return next.ServeHTTP(w, r)
 	}
 
-	return http.HandlerFunc(fn)
+	return chi.HandlerFunc(fn)
 }

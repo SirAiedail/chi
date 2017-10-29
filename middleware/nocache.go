@@ -6,6 +6,8 @@ package middleware
 import (
 	"net/http"
 	"time"
+
+	"github.com/SirAiedail/chi"
 )
 
 // Unix epoch time
@@ -36,8 +38,8 @@ var etagHeaders = []string{
 //      Cache-Control: no-cache, private, max-age=0
 //      X-Accel-Expires: 0
 //      Pragma: no-cache (for HTTP/1.0 proxies/clients)
-func NoCache(h http.Handler) http.Handler {
-	fn := func(w http.ResponseWriter, r *http.Request) {
+func NoCache(h chi.Handler) chi.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) chi.HandlerError {
 
 		// Delete any ETag headers that may have been set
 		for _, v := range etagHeaders {
@@ -51,8 +53,8 @@ func NoCache(h http.Handler) http.Handler {
 			w.Header().Set(k, v)
 		}
 
-		h.ServeHTTP(w, r)
+		return h.ServeHTTP(w, r)
 	}
 
-	return http.HandlerFunc(fn)
+	return chi.HandlerFunc(fn)
 }

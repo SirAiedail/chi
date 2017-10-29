@@ -9,6 +9,8 @@ import (
 	"net"
 	"net/http"
 	"strings"
+
+	"github.com/SirAiedail/chi"
 )
 
 type encoding int
@@ -35,7 +37,7 @@ var defaultContentTypes = map[string]struct{}{
 // body of predefined content types to a data format based
 // on Accept-Encoding request header. It uses a default
 // compression level.
-func DefaultCompress(next http.Handler) http.Handler {
+func DefaultCompress(next chi.Handler) chi.Handler {
 	return Compress(flate.DefaultCompression)(next)
 }
 
@@ -43,7 +45,7 @@ func DefaultCompress(next http.Handler) http.Handler {
 // body of a given content types to a data format based
 // on Accept-Encoding request header. It uses a given
 // compression level.
-func Compress(level int, types ...string) func(next http.Handler) http.Handler {
+func Compress(level int, types ...string) func(next chi.Handler) chi.Handler {
 	contentTypes := defaultContentTypes
 	if len(types) > 0 {
 		contentTypes = make(map[string]struct{}, len(types))
@@ -52,8 +54,8 @@ func Compress(level int, types ...string) func(next http.Handler) http.Handler {
 		}
 	}
 
-	return func(next http.Handler) http.Handler {
-		fn := func(w http.ResponseWriter, r *http.Request) {
+	return func(next chi.Handler) chi.Handler {
+		fn := func(w http.ResponseWriter, r *http.Request) chi.HandlerError {
 			mcw := &maybeCompressResponseWriter{
 				ResponseWriter: w,
 				w:              w,
@@ -63,10 +65,10 @@ func Compress(level int, types ...string) func(next http.Handler) http.Handler {
 			}
 			defer mcw.Close()
 
-			next.ServeHTTP(mcw, r)
+			return next.ServeHTTP(mcw, r)
 		}
 
-		return http.HandlerFunc(fn)
+		return chi.HandlerFunc(fn)
 	}
 }
 
@@ -199,7 +201,7 @@ func (w *maybeCompressResponseWriter) CloseNotify() <-chan bool {
 	// If the underlying writer does not implement http.CloseNotifier, return
 	// a channel that never receives a value. The semantics here is that the
 	// client never disconnnects before the request is processed by the
-	// http.Handler, which is close enough to the default behavior (when
+	// chi.Handler, which is close enough to the default behavior (when
 	// CloseNotify() is not even called).
 	return make(chan bool, 1)
 }
