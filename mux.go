@@ -374,6 +374,9 @@ func (mx *Mux) MethodNotAllowedHandler() HandlerFunc {
 
 // Error allows providing a function to handle errors that occurred
 // in middleware or request handlers.
+// Since this handler has to be wrapped around all others to catch
+// all errors bubbling up, it has no access to context values set
+// by the router, with Mux.Value or in a custom handler.
 func (mx *Mux) Error(h ErrorHandlerFunc) {
 	mx.errorHandler = h
 }
