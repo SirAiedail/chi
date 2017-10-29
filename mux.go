@@ -65,8 +65,8 @@ func (mx *Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) HandlerError {
 	// Ensure the mux has some routes defined on the mux
 	if mx.handler == nil {
 		return Error{
-			code: 500,
-			err:  errors.New("chi: attempting to route to a mux with no handlers"),
+			Code: 500,
+			Err:  errors.New("chi: attempting to route to a mux with no handlers"),
 		}
 	}
 
@@ -485,13 +485,13 @@ func (mx *Mux) updateSubRoutes(fn func(subMux *Mux)) {
 // methodNotAllowedHandler is a helper function to respond with a 405,
 // method not allowed.
 func methodNotAllowedHandler(_ http.ResponseWriter, _ *http.Request) HandlerError {
-	return Error{code: 405}
+	return Error{Code: 405}
 }
 
 // notFoundHandler is a helper function to respond with a 404,
 // not found.
 func notFoundHandler(_ http.ResponseWriter, _ *http.Request) HandlerError {
-	return Error{code: 404}
+	return Error{Code: 404}
 }
 
 // defaultErrorHandler is a function to send an HandlerError
@@ -499,7 +499,7 @@ func notFoundHandler(_ http.ResponseWriter, _ *http.Request) HandlerError {
 func defaultErrorHandler(err HandlerError, w http.ResponseWriter, _ *http.Request) {
 	s := err.Error()
 	if s == "" {
-		s = http.StatusText(err.Code())
+		s = http.StatusText(err.StatusCode())
 	}
-	http.Error(w, s, err.Code())
+	http.Error(w, s, err.StatusCode())
 }
