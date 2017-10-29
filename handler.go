@@ -30,21 +30,21 @@ func FromHTTPHandler(h http.Handler) Handler {
 
 type HandlerError interface {
 	error
-	Code() int
+	StatusCode() int
 }
 
 type Error struct {
-	code int
-	err  error
+	Code int
+	Err  error
 }
 
-func (e Error) Code() int {
-	return e.code
+func (e Error) StatusCode() int {
+	return e.Code
 }
 
 func (e Error) Error() string {
-	if e.err != nil {
-		return e.err.Error()
+	if e.Err != nil {
+		return e.Err.Error()
 	} else {
 		return ""
 	}
