@@ -3,14 +3,14 @@ package middleware
 import (
 	"net/http"
 
-	"github.com/go-chi/chi"
+	"github.com/SirAiedail/chi"
 )
 
 // StripSlashes is a middleware that will match request paths with a trailing
 // slash, strip it from the path and continue routing through the mux, if a route
 // matches, then it will serve the handler.
-func StripSlashes(next http.Handler) http.Handler {
-	fn := func(w http.ResponseWriter, r *http.Request) {
+func StripSlashes(next chi.Handler) chi.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) chi.HandlerError {
 		var path string
 		rctx := chi.RouteContext(r.Context())
 		if rctx.RoutePath != "" {
@@ -21,15 +21,15 @@ func StripSlashes(next http.Handler) http.Handler {
 		if len(path) > 1 && path[len(path)-1] == '/' {
 			rctx.RoutePath = path[:len(path)-1]
 		}
-		next.ServeHTTP(w, r)
+		return next.ServeHTTP(w, r)
 	}
-	return http.HandlerFunc(fn)
+	return chi.HandlerFunc(fn)
 }
 
 // RedirectSlashes is a middleware that will match request paths with a trailing
 // slash and redirect to the same path, less the trailing slash.
-func RedirectSlashes(next http.Handler) http.Handler {
-	fn := func(w http.ResponseWriter, r *http.Request) {
+func RedirectSlashes(next chi.Handler) chi.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) chi.HandlerError {
 		var path string
 		rctx := chi.RouteContext(r.Context())
 		if rctx.RoutePath != "" {
@@ -40,9 +40,9 @@ func RedirectSlashes(next http.Handler) http.Handler {
 		if len(path) > 1 && path[len(path)-1] == '/' {
 			path = path[:len(path)-1]
 			http.Redirect(w, r, path, 301)
-			return
+			return nil
 		}
-		next.ServeHTTP(w, r)
+		return next.ServeHTTP(w, r)
 	}
-	return http.HandlerFunc(fn)
+	return chi.HandlerFunc(fn)
 }

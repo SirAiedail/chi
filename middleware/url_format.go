@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/go-chi/chi"
+	"github.com/SirAiedail/chi"
 )
 
 var (
@@ -22,7 +22,7 @@ var (
 //
 // Sample usage.. for url paths: `/articles/1`, `/articles/1.json` and `/articles/1.xml`
 //
-//  func routes() http.Handler {
+//  func routes() chi.Handler {
 //    r := chi.NewRouter()
 //    r.Use(middleware.URLFormat)
 //
@@ -44,8 +44,8 @@ var (
 // 	  }
 // }
 //
-func URLFormat(next http.Handler) http.Handler {
-	fn := func(w http.ResponseWriter, r *http.Request) {
+func URLFormat(next chi.Handler) chi.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) chi.HandlerError {
 		ctx := r.Context()
 
 		var format string
@@ -66,7 +66,7 @@ func URLFormat(next http.Handler) http.Handler {
 
 		r = r.WithContext(context.WithValue(ctx, URLFormatCtxKey, format))
 
-		next.ServeHTTP(w, r)
+		return next.ServeHTTP(w, r)
 	}
-	return http.HandlerFunc(fn)
+	return chi.HandlerFunc(fn)
 }

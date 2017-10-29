@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-chi/chi"
+	"github.com/SirAiedail/chi"
 )
 
 var testContent = []byte("Hello world!")
@@ -19,13 +19,14 @@ func TestThrottleBacklog(t *testing.T) {
 
 	r.Use(ThrottleBacklog(10, 50, time.Second*10))
 
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) chi.HandlerError {
 		w.WriteHeader(http.StatusOK)
 		time.Sleep(time.Second * 1) // Expensive operation.
 		w.Write(testContent)
+		return nil
 	})
 
-	server := httptest.NewServer(r)
+	server := httptest.NewServer(r.ToHTTPHandler())
 	defer server.Close()
 
 	client := http.Client{
@@ -60,13 +61,14 @@ func TestThrottleClientTimeout(t *testing.T) {
 
 	r.Use(ThrottleBacklog(10, 50, time.Second*10))
 
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) chi.HandlerError {
 		w.WriteHeader(http.StatusOK)
 		time.Sleep(time.Second * 5) // Expensive operation.
 		w.Write(testContent)
+		return nil
 	})
 
-	server := httptest.NewServer(r)
+	server := httptest.NewServer(r.ToHTTPHandler())
 	defer server.Close()
 
 	client := http.Client{
@@ -92,13 +94,14 @@ func TestThrottleTriggerGatewayTimeout(t *testing.T) {
 
 	r.Use(ThrottleBacklog(50, 100, time.Second*5))
 
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) chi.HandlerError {
 		w.WriteHeader(http.StatusOK)
 		time.Sleep(time.Second * 10) // Expensive operation.
 		w.Write(testContent)
+		return nil
 	})
 
-	server := httptest.NewServer(r)
+	server := httptest.NewServer(r.ToHTTPHandler())
 	defer server.Close()
 
 	client := http.Client{
@@ -135,7 +138,7 @@ func TestThrottleTriggerGatewayTimeout(t *testing.T) {
 			buf, err := ioutil.ReadAll(res.Body)
 			assertNoError(t, err)
 			assertEqual(t, http.StatusServiceUnavailable, res.StatusCode)
-			assertEqual(t, errTimedOut, strings.TrimSpace(string(buf)))
+			assertEqual(t, errTimedOut.Error(), strings.TrimSpace(string(buf)))
 
 		}(i)
 	}
@@ -148,13 +151,14 @@ func TestThrottleMaximum(t *testing.T) {
 
 	r.Use(ThrottleBacklog(50, 50, time.Second*5))
 
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) chi.HandlerError {
 		w.WriteHeader(http.StatusOK)
 		time.Sleep(time.Second * 2) // Expensive operation.
 		w.Write(testContent)
+		return nil
 	})
 
-	server := httptest.NewServer(r)
+	server := httptest.NewServer(r.ToHTTPHandler())
 	defer server.Close()
 
 	client := http.Client{
@@ -195,7 +199,7 @@ func TestThrottleMaximum(t *testing.T) {
 			buf, err := ioutil.ReadAll(res.Body)
 			assertNoError(t, err)
 			assertEqual(t, http.StatusServiceUnavailable, res.StatusCode)
-			assertEqual(t, errCapacityExceeded, strings.TrimSpace(string(buf)))
+			assertEqual(t, errCapacityExceeded.Error(), strings.TrimSpace(string(buf)))
 
 		}(i)
 	}

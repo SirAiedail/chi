@@ -6,6 +6,8 @@ package middleware
 import (
 	"net/http"
 	"strings"
+
+	"github.com/SirAiedail/chi"
 )
 
 var xForwardedFor = http.CanonicalHeaderKey("X-Forwarded-For")
@@ -26,15 +28,15 @@ var xRealIP = http.CanonicalHeaderKey("X-Real-IP")
 // values from the client, or if you use this middleware without a reverse
 // proxy, malicious clients will be able to make you very sad (or, depending on
 // how you're using RemoteAddr, vulnerable to an attack of some sort).
-func RealIP(h http.Handler) http.Handler {
-	fn := func(w http.ResponseWriter, r *http.Request) {
+func RealIP(h chi.Handler) chi.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) chi.HandlerError {
 		if rip := realIP(r); rip != "" {
 			r.RemoteAddr = rip
 		}
-		h.ServeHTTP(w, r)
+		return h.ServeHTTP(w, r)
 	}
 
-	return http.HandlerFunc(fn)
+	return chi.HandlerFunc(fn)
 }
 
 func realIP(r *http.Request) string {

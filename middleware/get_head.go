@@ -3,11 +3,11 @@ package middleware
 import (
 	"net/http"
 
-	"github.com/go-chi/chi"
+	"github.com/SirAiedail/chi"
 )
 
-func GetHead(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func GetHead(next chi.Handler) chi.Handler {
+	return chi.HandlerFunc(func(w http.ResponseWriter, r *http.Request) chi.HandlerError {
 		if r.Method == "HEAD" {
 			rctx := chi.RouteContext(r.Context())
 			routePath := rctx.RoutePath
@@ -28,11 +28,10 @@ func GetHead(next http.Handler) http.Handler {
 			if !rctx.Routes.Match(tctx, "HEAD", routePath) {
 				rctx.RouteMethod = "GET"
 				rctx.RoutePath = routePath
-				next.ServeHTTP(w, r)
-				return
+				return next.ServeHTTP(w, r)
 			}
 		}
 
-		next.ServeHTTP(w, r)
+		return next.ServeHTTP(w, r)
 	})
 }

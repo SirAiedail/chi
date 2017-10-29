@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"golang.org/x/net/http2"
+
+	"github.com/SirAiedail/chi"
 )
 
 // NOTE: we must import `golang.org/x/net/http2` in order to explicitly enable
@@ -17,7 +19,7 @@ import (
 // though as the transport configuration happens under the hood on go 1.7+.
 
 func TestWrapWriterHTTP2(t *testing.T) {
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := chi.HandlerFunc(func(w http.ResponseWriter, r *http.Request) chi.HandlerError {
 		_, cn := w.(http.CloseNotifier)
 		if !cn {
 			t.Fatal("request should have been a http.CloseNotifier")
@@ -40,11 +42,15 @@ func TestWrapWriterHTTP2(t *testing.T) {
 		}
 
 		w.Write([]byte("OK"))
+		return nil
 	})
 
-	wmw := func(next http.Handler) http.Handler {
+	wmw := func(next chi.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			next.ServeHTTP(NewWrapResponseWriter(w, r.ProtoMajor), r)
+			err := next.ServeHTTP(NewWrapResponseWriter(w, r.ProtoMajor), r)
+			if err != nil {
+				panic(err.Error())
+			}
 		})
 	}
 

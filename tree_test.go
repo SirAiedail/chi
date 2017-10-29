@@ -8,27 +8,27 @@ import (
 )
 
 func TestTree(t *testing.T) {
-	hStub := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hIndex := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hFavicon := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hArticleList := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hArticleNear := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hArticleShow := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hArticleShowRelated := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hArticleShowOpts := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hArticleSlug := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hArticleByUser := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hUserList := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hUserShow := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hAdminCatchall := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hAdminAppShow := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hAdminAppShowCatchall := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hUserProfile := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hUserSuper := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hUserAll := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hHubView1 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hHubView2 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hHubView3 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
+	hStub := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hIndex := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hFavicon := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hArticleList := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hArticleNear := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hArticleShow := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hArticleShowRelated := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hArticleShowOpts := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hArticleSlug := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hArticleByUser := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hUserList := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hUserShow := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hAdminCatchall := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hAdminAppShow := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hAdminAppShowCatchall := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hUserProfile := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hUserSuper := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hUserAll := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hHubView1 := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hHubView2 := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hHubView3 := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
 
 	tr := &node{}
 
@@ -78,10 +78,10 @@ func TestTree(t *testing.T) {
 	tr.InsertRoute(mGET, "/hubs/{hubID}/users", hHubView3)
 
 	tests := []struct {
-		r string       // input request path
-		h http.Handler // output matched handler
-		k []string     // output param keys
-		v []string     // output param values
+		r string   // input request path
+		h Handler  // output matched handler
+		k []string // output param keys
+		v []string // output param values
 	}{
 		{r: "/", h: hIndex, k: []string{}, v: []string{}},
 		{r: "/favicon.ico", h: hFavicon, k: []string{}, v: []string{}},
@@ -131,7 +131,7 @@ func TestTree(t *testing.T) {
 
 		_, handlers, _ := tr.FindRoute(rctx, mGET, tt.r)
 
-		var handler http.Handler
+		var handler Handler
 		if methodHandler, ok := handlers[mGET]; ok {
 			handler = methodHandler.handler
 		}
@@ -152,23 +152,23 @@ func TestTree(t *testing.T) {
 }
 
 func TestTreeMoar(t *testing.T) {
-	hStub := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hStub1 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hStub2 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hStub3 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hStub4 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hStub5 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hStub6 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hStub7 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hStub8 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hStub9 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hStub10 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hStub11 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hStub12 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hStub13 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hStub14 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hStub15 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hStub16 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
+	hStub := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hStub1 := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hStub2 := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hStub3 := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hStub4 := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hStub5 := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hStub6 := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hStub7 := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hStub8 := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hStub9 := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hStub10 := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hStub11 := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hStub12 := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hStub13 := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hStub14 := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hStub15 := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hStub16 := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
 
 	// TODO: panic if we see {id}{x} because we're missing a delimiter, its not possible.
 	// also {:id}* is not possible.
@@ -202,11 +202,11 @@ func TestTreeMoar(t *testing.T) {
 	tr.InsertRoute(mGET, "/users/{id}/settings/*", hStub16)
 
 	tests := []struct {
-		m methodTyp    // input request http method
-		r string       // input request path
-		h http.Handler // output matched handler
-		k []string     // output param keys
-		v []string     // output param values
+		m methodTyp // input request http method
+		r string    // input request path
+		h Handler   // output matched handler
+		k []string  // output param keys
+		v []string  // output param values
 	}{
 		{m: mGET, r: "/articles/search", h: hStub1, k: []string{}, v: []string{}},
 		{m: mGET, r: "/articlefun", h: hStub5, k: []string{}, v: []string{}},
@@ -247,7 +247,7 @@ func TestTreeMoar(t *testing.T) {
 
 		_, handlers, _ := tr.FindRoute(rctx, tt.m, tt.r)
 
-		var handler http.Handler
+		var handler Handler
 		if methodHandler, ok := handlers[tt.m]; ok {
 			handler = methodHandler.handler
 		}
@@ -268,13 +268,13 @@ func TestTreeMoar(t *testing.T) {
 }
 
 func TestTreeRegexp(t *testing.T) {
-	hStub1 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hStub2 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hStub3 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hStub4 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hStub5 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hStub6 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hStub7 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
+	hStub1 := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hStub2 := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hStub3 := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hStub4 := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hStub5 := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hStub6 := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hStub7 := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
 
 	tr := &node{}
 	tr.InsertRoute(mGET, "/articles/{rid:^[0-9]{5,6}}", hStub7)
@@ -292,10 +292,10 @@ func TestTreeRegexp(t *testing.T) {
 	// log.Println("~~~~~~~~~")
 
 	tests := []struct {
-		r string       // input request path
-		h http.Handler // output matched handler
-		k []string     // output param keys
-		v []string     // output param values
+		r string   // input request path
+		h Handler  // output matched handler
+		k []string // output param keys
+		v []string // output param values
 	}{
 		{r: "/articles", h: nil, k: []string{}, v: []string{}},
 		{r: "/articles/12345", h: hStub7, k: []string{"rid"}, v: []string{"12345"}},
@@ -313,7 +313,7 @@ func TestTreeRegexp(t *testing.T) {
 
 		_, handlers, _ := tr.FindRoute(rctx, mGET, tt.r)
 
-		var handler http.Handler
+		var handler Handler
 		if methodHandler, ok := handlers[mGET]; ok {
 			handler = methodHandler.handler
 		}
@@ -334,7 +334,7 @@ func TestTreeRegexp(t *testing.T) {
 }
 
 func TestTreeRegexMatchWholeParam(t *testing.T) {
-	hStub1 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
+	hStub1 := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
 
 	rctx := NewRouteContext()
 	tr := &node{}
@@ -342,7 +342,7 @@ func TestTreeRegexMatchWholeParam(t *testing.T) {
 
 	tests := []struct {
 		url             string
-		expectedHandler http.Handler
+		expectedHandler Handler
 	}{
 		{url: "/13", expectedHandler: hStub1},
 		{url: "/a13", expectedHandler: nil},
@@ -359,9 +359,9 @@ func TestTreeRegexMatchWholeParam(t *testing.T) {
 }
 
 func TestTreeFindPattern(t *testing.T) {
-	hStub1 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hStub2 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	hStub3 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
+	hStub1 := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hStub2 := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	hStub3 := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
 
 	tr := &node{}
 	tr.InsertRoute(mGET, "/pages/*", hStub1)
@@ -429,8 +429,8 @@ func stringSliceEqual(a, b []string) bool {
 }
 
 func BenchmarkTreeGet(b *testing.B) {
-	h1 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	h2 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
+	h1 := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
+	h2 := HandlerFunc(func(w http.ResponseWriter, r *http.Request) HandlerError { return nil })
 
 	tr := &node{}
 	tr.InsertRoute(mGET, "/", h1)
@@ -457,7 +457,7 @@ func TestWalker(t *testing.T) {
 	r := bigMux()
 
 	// Walk the muxBig router tree.
-	if err := Walk(r, func(method string, route string, handler http.Handler, middlewares ...func(http.Handler) http.Handler) error {
+	if err := Walk(r, func(method string, route string, handler Handler, middlewares ...func(Handler) Handler) error {
 		t.Logf("%v %v", method, route)
 
 		return nil
