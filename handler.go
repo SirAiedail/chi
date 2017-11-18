@@ -52,6 +52,8 @@ func (e Error) StatusCode() int {
 func (e Error) Error() string {
 	if e.Err != nil {
 		return e.Err.Error()
+	} else if status := e.Code; status > 0 {
+		return http.StatusText(status)
 	} else {
 		return ""
 	}
